@@ -69,7 +69,7 @@ void GlobalPlanner::outlineMap(unsigned char* costarr, int nx, int ny, unsigned 
 GlobalPlanner::GlobalPlanner() :
         costmap_(NULL), initialized_(false), allow_unknown_(true),
         p_calc_(NULL), planner_(NULL), path_maker_(NULL), orientation_filter_(NULL),
-        potential_array_(NULL) {
+        potential_array_(NULL), make_plan_update_cost_mutex_(NULL) {
 }
 
 GlobalPlanner::GlobalPlanner(std::string name, costmap_2d::Costmap2D* costmap, std::string frame_id) :
@@ -87,6 +87,11 @@ GlobalPlanner::~GlobalPlanner() {
         delete path_maker_;
     if (dsrv_)
         delete dsrv_;
+}
+
+void GlobalPlanner::initMutex(boost::mutex* make_plan_update_cost_mutex)
+{
+    make_plan_update_cost_mutex_ = make_plan_update_cost_mutex;
 }
 
 void GlobalPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros) {
@@ -224,6 +229,9 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
         return false;
     }
 
+    if(make_plan_update_cost_mutex_ != NULL)
+      (*make_plan_update_cost_mutex_).lock();
+
     //clear the plan, just in case
     plan.clear();
 
@@ -234,12 +242,16 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     if (goal.header.frame_id != global_frame) {
         ROS_ERROR(
                 "The goal pose passed to this planner must be in the %s frame.  It is instead in the %s frame.", global_frame.c_str(), goal.header.frame_id.c_str());
+        if(make_plan_update_cost_mutex_ != NULL)
+            (*make_plan_update_cost_mutex_).unlock();
         return false;
     }
 
     if (start.header.frame_id != global_frame) {
         ROS_ERROR(
                 "The start pose passed to this planner must be in the %s frame.  It is instead in the %s frame.", global_frame.c_str(), start.header.frame_id.c_str());
+        if(make_plan_update_cost_mutex_ != NULL)
+            (*make_plan_update_cost_mutex_).unlock();
         return false;
     }
 
@@ -252,6 +264,8 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     if (!costmap_->worldToMap(wx, wy, start_x_i, start_y_i)) {
         ROS_WARN(
                 "The robot's start position is off the global costmap. Planning will always fail, are you sure the robot has been properly localized?");
+        if(make_plan_update_cost_mutex_ != NULL)
+            (*make_plan_update_cost_mutex_).unlock();
         return false;
     }
     if(old_navfn_behavior_){
@@ -267,6 +281,8 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     if (!costmap_->worldToMap(wx, wy, goal_x_i, goal_y_i)) {
         ROS_WARN_THROTTLE(1.0,
                 "The goal sent to the global planner is off the global costmap. Planning will always fail to this goal.");
+        if(make_plan_update_cost_mutex_ != NULL)
+            (*make_plan_update_cost_mutex_).unlock();
         return false;
     }
     if(old_navfn_behavior_){
@@ -318,6 +334,9 @@ bool GlobalPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geom
     //publish the plan for visualization purposes
     publishPlan(plan);
     delete[] potential_array_;
+
+    if(make_plan_update_cost_mutex_ != NULL)
+        (*make_plan_update_cost_mutex_).unlock();
     return !plan.empty();
 }
 

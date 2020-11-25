@@ -65,6 +65,8 @@ public:
    */
   ~LayeredCostmap();
 
+  void initMutex(boost::mutex* make_plan_update_cost_mutex);
+
   /**
    * @brief  Update the underlying costmap with new data.
    * If you want to update the map outside of the update loop that runs, you can call this.
@@ -170,6 +172,8 @@ private:
   bool size_locked_;
   double circumscribed_radius_, inscribed_radius_;
   std::vector<geometry_msgs::Point> footprint_;
+
+  boost::mutex* make_plan_update_cost_mutex_;
 };
 
 }  // namespace costmap_2d

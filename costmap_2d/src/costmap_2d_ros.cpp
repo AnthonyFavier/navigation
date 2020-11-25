@@ -177,6 +177,11 @@ Costmap2DROS::Costmap2DROS(const std::string& name, tf2_ros::Buffer& tf) :
   dsrv_->setCallback(cb);
 }
 
+void Costmap2DROS::initMutex(boost::mutex* make_plan_update_cost_mutex)
+{
+    layered_costmap_->initMutex(make_plan_update_cost_mutex);
+}
+
 void Costmap2DROS::setUnpaddedRobotFootprintPolygon(const geometry_msgs::Polygon& footprint)
 {
   setUnpaddedRobotFootprint(toPointVector(footprint));

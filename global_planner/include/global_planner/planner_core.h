@@ -83,6 +83,8 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
          */
         ~GlobalPlanner();
 
+        void initMutex(boost::mutex* make_plan_update_cost_mutex);
+
         /**
          * @brief  Initialization function for the PlannerCore object
          * @param  name The name of this planner
@@ -205,6 +207,7 @@ class GlobalPlanner : public nav_core::BaseGlobalPlanner {
         dynamic_reconfigure::Server<global_planner::GlobalPlannerConfig> *dsrv_;
         void reconfigureCB(global_planner::GlobalPlannerConfig &config, uint32_t level);
 
+        boost::mutex* make_plan_update_cost_mutex_;
 };
 
 } //end namespace global_planner

@@ -82,6 +82,8 @@ public:
   Costmap2DROS(const std::string &name, tf2_ros::Buffer& tf);
   ~Costmap2DROS();
 
+  void initMutex(boost::mutex* make_plan_update_cost_mutex);
+
   /**
    * @brief  Subscribes to sensor topics if necessary and starts costmap
    * updates, can be called to restart the costmap after calls to either

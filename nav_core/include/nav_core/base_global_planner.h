@@ -73,6 +73,8 @@ namespace nav_core {
         return makePlan(start, goal, plan);
       }
 
+      virtual void initMutex(boost::mutex* make_plan_update_cost_mutex){};
+
       /**
        * @brief  Initialization function for the BaseGlobalPlanner
        * @param  name The name of this planner

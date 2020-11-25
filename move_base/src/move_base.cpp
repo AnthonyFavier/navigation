@@ -118,12 +118,14 @@ namespace move_base {
 
     //create the ros wrapper for the planner's costmap... and initializer a pointer we'll use with the underlying map
     planner_costmap_ros_ = new costmap_2d::Costmap2DROS("global_costmap", tf_);
+    planner_costmap_ros_->initMutex(&make_plan_update_cost_mutex_);
     planner_costmap_ros_->pause();
 
     //initialize the global planner
     try {
       planner_ = bgp_loader_.createInstance(global_planner);
       planner_->initialize(bgp_loader_.getName(global_planner), planner_costmap_ros_);
+      planner_->initMutex(&make_plan_update_cost_mutex_);
     } catch (const pluginlib::PluginlibException& ex) {
       ROS_FATAL("Failed to create the %s planner, are you sure it is properly registered and that the containing library is built? Exception: %s", global_planner.c_str(), ex.what());
       exit(1);

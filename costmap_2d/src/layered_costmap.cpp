@@ -63,7 +63,8 @@ LayeredCostmap::LayeredCostmap(std::string global_frame, bool rolling_window, bo
     initialized_(false),
     size_locked_(false),
     circumscribed_radius_(1.0),
-    inscribed_radius_(0.1)
+    inscribed_radius_(0.1),
+    make_plan_update_cost_mutex_(NULL)
 {
   if (track_unknown)
     costmap_.setDefaultValue(255);
@@ -77,6 +78,11 @@ LayeredCostmap::~LayeredCostmap()
   {
     plugins_.pop_back();
   }
+}
+
+void LayeredCostmap::initMutex(boost::mutex* make_plan_update_cost_mutex)
+{
+  make_plan_update_cost_mutex_ = make_plan_update_cost_mutex;
 }
 
 void LayeredCostmap::resizeMap(unsigned int size_x, unsigned int size_y, double resolution, double origin_x,
@@ -108,6 +114,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
 
   if (plugins_.size() == 0)
     return;
+
+  if(make_plan_update_cost_mutex_ != NULL)
+    (*make_plan_update_cost_mutex_).lock();
 
   minx_ = miny_ = 1e30;
   maxx_ = maxy_ = -1e30;
@@ -142,7 +151,11 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   ROS_DEBUG("Updating area x: [%d, %d] y: [%d, %d]", x0, xn, y0, yn);
 
   if (xn < x0 || yn < y0)
+  {
+    if(make_plan_update_cost_mutex_ != NULL)
+        (*make_plan_update_cost_mutex_).unlock();
     return;
+  }
 
   costmap_.resetMap(x0, y0, xn, yn);
   for (vector<boost::shared_ptr<Layer> >::iterator plugin = plugins_.begin(); plugin != plugins_.end();
@@ -157,6 +170,9 @@ void LayeredCostmap::updateMap(double robot_x, double robot_y, double robot_yaw)
   byn_ = yn;
 
   initialized_ = true;
+
+    if(make_plan_update_cost_mutex_ != NULL)
+        (*make_plan_update_cost_mutex_).unlock();
 }
 
 bool LayeredCostmap::isCurrent()
